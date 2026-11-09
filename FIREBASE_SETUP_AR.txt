@@ -1,0 +1,14 @@
+إعداد Firebase لموقع ISLAM CHIC بعد النشر على Netlify
+
+1. انشر الموقع على Netlify أولًا واحصل على النطاق، مثال: islam-chic.netlify.app.
+2. افتح Firebase Console ثم Authentication > Settings > Authorized domains.
+3. أضف نطاق Netlify كما هو تمامًا، دون https:// ودون مسار أو / في النهاية.
+4. تأكد أن طريقة تسجيل الدخول Adresse e-mail/Mot de passe مفعّلة.
+5. لا تغيّر قواعد Cloud Firestore إلى allow read, write: if true. يجب أن تسمح القواعد فقط بالعمليات اللازمة وتحمي قراءة وتحديث الطلبات للمدير.
+
+معلومات مهمة:
+- إعدادات Firebase Web App ومعرّف المدير مضمنة في index.html.
+- بيانات المستخدمين في Firebase Authentication والطلبات في Cloud Firestore تبقى في مشروع Firebase الحالي.
+- نقل ZIP أو GitHub أو Netlify لا ينقل قاعدة البيانات ولا ينشئ نسخة احتياطية منها.
+- إذا استمر تسجيل الدخول بالتعليق بعد إضافة النطاق، أرسل نص رسالة الخطأ الظاهرة دون كلمة المرور.
+- لا تشارك كلمة مرور المدير أو مفاتيح Service Account.
