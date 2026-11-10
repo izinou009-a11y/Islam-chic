@@ -685,35 +685,44 @@
         }
 
         async function migrateLocalProductsToCloudIfEmpty() {
-            if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) return;
-            const collection = db.collection('products');
-            const cloudSnapshot = await collection.limit(1).get();
-            if (!cloudSnapshot.empty) return;
+    if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) return;
 
-            // استخدم النسخة التي حُفظت قبل تشغيل مستمع Firestore،
-            // لأن أول لقطة فارغة لا يجب أن تمحو منتجات localStorage.
-            const localProducts = Array.isArray(localProductsPendingCloudMigration)
-                ? localProductsPendingCloudMigration.map(p => ({ ...p }))
-                : (Array.isArray(products) ? products.map(p => ({ ...p })) : []);
-            if (!localProducts.length) {
-                console.warn('No local products found to migrate to Firestore.');
-                return;
-            }
+    const collection = db.collection('products');
 
-            for (const product of localProducts) {
-                const data = { ...product };
-                const id = String(data.id ?? (Date.now() + Math.random()));
-                delete data.id;
-                await collection.doc(id).set(data);
-            }
+    const localProducts = Array.isArray(localProductsPendingCloudMigration)
+        ? localProductsPendingCloudMigration.map(p => ({ ...p }))
+        : [];
 
-            const migratedSnapshot = await collection.get();
-            products = migratedSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-            localStorage.setItem('bs_products', JSON.stringify(products));
-            localProductsPendingCloudMigration = [];
-            renderStoreProducts();
-            renderAdminProducts();
+    if (!localProducts.length) {
+        console.warn('No local products found to migrate.');
+        return;
+    }
+
+    for (const product of localProducts) {
+        const data = { ...product };
+        const id = String(data.id ?? (Date.now() + Math.random()));
+        delete data.id;
+
+        const existing = await collection.doc(id).get();
+
+        if (!existing.exists) {
+            await collection.doc(id).set(data);
         }
+    }
+
+    const migratedSnapshot = await collection.get();
+
+    products = migratedSnapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id
+    }));
+
+    localStorage.setItem('bs_products', JSON.stringify(products));
+    localProductsPendingCloudMigration = [];
+
+    renderStoreProducts();
+    renderAdminProducts();
+}
 
         const wilayas = [
             "01 - أدرار", "02 - الشلف", "03 - الأغواط", "04 - أم البواقي", "05 - باتنة", "06 - بجاية", "07 - بسكرة", "08 - بشار", 
