@@ -1109,7 +1109,7 @@
         function scrollToProducts() { document.getElementById('products-section').scrollIntoView({ behavior: 'smooth' }); }
 
         function openDirectCheckout(productId) {
-            selectedProductForCheckout = products.find(p => p.id === productId);
+            selectedProductForCheckout = products.find(p => String(p.id) === String(productId));
             if(!selectedProductForCheckout) return;
 
             document.getElementById('c-qty').value = 1;
