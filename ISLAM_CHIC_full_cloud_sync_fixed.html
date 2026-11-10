@@ -1039,7 +1039,7 @@
 } catch (dbError) {
     console.error('Firestore orders read error:', dbError);
     alert('تعذر تحميل الطلبات: ' + (dbError.code || dbError.message || 'خطأ غير معروف'));
-}  catch (error) {
+} } catch (error) {
                 console.error('Firebase login error:', error);
                 const messages = {
                     'auth/invalid-email': 'صيغة البريد الإلكتروني غير صحيحة.',
