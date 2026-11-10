@@ -10,3 +10,4 @@
   from = "/"
   to = "/ISLAM_CHIC_full_cloud_sync_fixed.html"
   status = 200
+ force = true
