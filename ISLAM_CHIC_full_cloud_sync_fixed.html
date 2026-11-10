@@ -645,7 +645,7 @@
                 if (!snapshot.empty) {
                     // عند وجود منتجات في السحابة، تصبح هي المصدر الرئيسي لجميع الأجهزة.
                     products = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-                    localProductsPendingCloudMigration = [];
+                
                     localStorage.setItem('bs_products', JSON.stringify(products));
                 } else {
                     // لا نمسح منتجات هذا الهاتف إذا كانت مجموعة Firestore فارغة؛
