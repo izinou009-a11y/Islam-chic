@@ -1012,19 +1012,33 @@
                 document.getElementById('admin-password').value = '';
                 closeModal('admin-login-modal');
                 showView('admin-view');
-                try {
-                    await migrateLocalProductsToCloudIfEmpty();
-                    await syncStoreSettingsAfterAdminLogin();
-                    const snap = await db.collection('orders').get();
-                    orders = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    localStorage.setItem('bs_orders', JSON.stringify(orders));
-                    renderAdminOrders();
-                    renderIncome();
-                } catch (dbError) {
-                    console.error('Firestore read error:', dbError);
-                    alert('تم تسجيل الدخول بنجاح، لكن تعذّر تحميل الطلبات. تحقق من قواعد Firestore.');
-                }
-            } catch (error) {
+              try {
+    try {
+        await migrateLocalProductsToCloudIfEmpty();
+    } catch (syncError) {
+        console.error('Products sync error:', syncError);
+    }
+
+    try {
+        await syncStoreSettingsAfterAdminLogin();
+    } catch (settingsError) {
+        console.error('Settings sync error:', settingsError);
+    }
+
+    const snap = await db.collection('orders').get();
+    orders = snap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+    }));
+
+    localStorage.setItem('bs_orders', JSON.stringify(orders));
+    renderAdminOrders();
+    renderIncome();
+
+} catch (dbError) {
+    console.error('Firestore orders read error:', dbError);
+    alert('تعذر تحميل الطلبات: ' + (dbError.code || dbError.message || 'خطأ غير معروف'));
+}  catch (error) {
                 console.error('Firebase login error:', error);
                 const messages = {
                     'auth/invalid-email': 'صيغة البريد الإلكتروني غير صحيحة.',
