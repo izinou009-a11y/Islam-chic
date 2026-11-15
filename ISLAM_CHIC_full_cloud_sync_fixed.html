@@ -1400,17 +1400,16 @@ let uploadedProductImagesBase64 = [];
             }
         }
 
-                function previewImage(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(uploadEvent) {
-                    uploadedProductImgBase64 = uploadEvent.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-        }
+                if(files.length){
+  images=await Promise.all(files.map(readImage));
 
+  const totalSize=images.reduce((sum,img)=>sum+img.length,0);
+
+  if(totalSize>600000){
+    alert('حجم الصور الإجمالي كبير. اختر صورًا أقل أو أصغر.');
+    return;
+  }
+}
         async function handleInitialProductSubmit(e) {
             e.preventDefault();
             const product = {
