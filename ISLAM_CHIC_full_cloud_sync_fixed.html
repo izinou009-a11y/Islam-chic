@@ -837,6 +837,66 @@
         let selectedProductForCheckout = null;
         let uploadedProductImgBase64 = "";
 let uploadedProductImagesBase64 = [];
+        async function previewImages(event) {
+    const files = Array.from(event.target.files || []);
+
+    if (files.length > 5) {
+        alert('يمكنك اختيار 5 صور كحد أقصى.');
+        event.target.value = '';
+        return;
+    }
+
+    try {
+        const images = await Promise.all(files.map(file => {
+            return new Promise((resolve, reject) => {
+                if (!file.type.startsWith('image/')) {
+                    reject(new Error('ملف غير صالح'));
+                    return;
+                }
+
+                const reader = new FileReader();
+
+                reader.onload = e => {
+                    const img = new Image();
+
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const scale = Math.min(1, 1000 / Math.max(img.width, img.height));
+
+                        canvas.width = Math.round(img.width * scale);
+                        canvas.height = Math.round(img.height * scale);
+
+                        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                        resolve(canvas.toDataURL('image/jpeg', 0.65));
+                    };
+
+                    img.onerror = reject;
+                    img.src = e.target.result;
+                };
+
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }));
+
+        const totalSize = images.reduce((sum, img) => sum + img.length, 0);
+
+        if (totalSize > 600000) {
+            alert('حجم الصور كبير. اختر صورًا أصغر.');
+            event.target.value = '';
+            return;
+        }
+
+        uploadedProductImagesBase64 = images;
+        uploadedProductImgBase64 = images[0] || '';
+
+        alert('تم تجهيز ' + images.length + ' صورة بنجاح.');
+    } catch (error) {
+        alert('تعذرت قراءة الصور. حاول اختيار صور أخرى.');
+        event.target.value = '';
+    }
+}
 
         const defaultBrandLogoSrc = document.querySelector('.brand-mark')?.getAttribute('src') || '';
         const savedBrandLogoKey = 'islam_chic_custom_brand_logo';
@@ -990,7 +1050,7 @@ let uploadedProductImagesBase64 = [];
             document.getElementById(id).classList.add('active');
             if (id === 'checkout-modal') populateCheckoutCompanies();
         }
-        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+       function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
         // تسجيل الدخول: ربط مباشر بالزر لتفادي تعطل onclick داخل بعض المتصفحات.
         window.adminLogin = async function () {
@@ -1006,7 +1066,7 @@ let uploadedProductImagesBase64 = [];
                 return;
             }
             if (button) { button.disabled = true; button.textContent = 'جارٍ تسجيل الدخول...'; }
-            try {
+           try {
                 // مهلة زمنية حتى لا يبقى الزر معلقاً إذا لم يستجب خادم Firebase.
                 const loginPromise = auth.signInWithEmailAndPassword(email, password);
                 const timeoutPromise = new Promise((_, reject) => {
@@ -1082,29 +1142,68 @@ let uploadedProductImagesBase64 = [];
             if (qty === 2 && product.price2 !== '' && product.price2 != null && Number.isFinite(price2) && price2 >= 0) return price2;
             return Number(product.price) || 0;
         }
-
         function renderStoreProducts(filter = 'all') {
-            const container = document.getElementById('products-container');
-            container.innerHTML = "";
-            let filtered = products.filter(p => filter === 'all' || p.type === filter);
-            if(filtered.length === 0) {
-                container.innerHTML = "<p style='grid-column:1/-1; text-align:center; color:#999;'>لا توجد منتجات.</p>"; return;
-            }
-            filtered.forEach(p => {
-                let imgHTML = p.img ? `<div class="product-img" style="background-image: url('${p.img}')"></div>` : `<div class="product-img">لا توجد صورة</div>`;
-                container.innerHTML += `
-                    <div class="product-card">
-                        ${imgHTML}
-                        <div class="product-info">
-                            <div class="product-title">${p.name}</div>
-                            <div class="product-meta">المقاسات: ${p.sizes} | الألوان: ${p.colors}</div>
-                            <div class="product-price">${p.price} دج</div>
-                            <button class="btn" style="width:100%" onclick="openDirectCheckout(${p.id})">اطلب الآن</button>
-                        </div>
-                    </div>`;
-            });
-        }
+    const container = document.getElementById('products-container');
+    container.innerHTML = "";
+    window.productGalleryImages = {};
 
+    let filtered = products.filter(p => filter === 'all' || p.type === filter);
+
+    if(filtered.length === 0) {
+        container.innerHTML = "<p style='grid-column:1/-1; text-align:center; color:#999;'>لا توجد منتجات.</p>";
+        return;
+    }
+
+    filtered.forEach((p, index) => {
+        const images = Array.isArray(p.images) && p.images.length
+            ? p.images
+            : (p.img ? [p.img] : []);
+
+        window.productGalleryImages[index] = images;
+
+        let imgHTML = images.length
+            ? `<div style="position:relative;">
+                <img id="product-gallery-${index}" src="${images[0]}"
+                     style="width:100%;height:300px;object-fit:cover;display:block;">
+                ${images.length > 1 ? `
+                    <button onclick="changeProductImage(${index},-1)"
+                        style="position:absolute;right:8px;top:45%;padding:8px;">❯</button>
+                    <button onclick="changeProductImage(${index},1)"
+                        style="position:absolute;left:8px;top:45%;padding:8px;">❮</button>
+                    <span id="product-count-${index}"
+                        style="position:absolute;bottom:8px;left:45%;background:#000;color:white;padding:4px 9px;border-radius:10px;">1/${images.length}</span>
+                ` : ''}
+            </div>`
+            : `<div class="product-img">لا توجد صورة</div>`;
+
+        container.innerHTML += `
+            <div class="product-card">
+                ${imgHTML}
+                <div class="product-info">
+                    <div class="product-title">${p.name}</div>
+                    <div class="product-meta">المقاسات: ${p.sizes} | الألوان: ${p.colors}</div>
+                    <div class="product-price">${p.price} دج</div>
+                    <button class="btn" style="width:100%" onclick="openDirectCheckout(${p.id})">اطلب الآن</button>
+                </div>
+            </div>`;
+    });
+}
+
+function changeProductImage(index, direction) {
+    const images = window.productGalleryImages[index];
+    if(!images || images.length < 2) return;
+
+    const img = document.getElementById('product-gallery-' + index);
+    const count = document.getElementById('product-count-' + index);
+
+    let current = Number(img.dataset.index || 0);
+    current = (current + direction + images.length) % images.length;
+
+    img.src = images[current];
+    img.dataset.index = current;
+    count.textContent = (current + 1) + '/' + images.length;
+}
+        
         function filterProducts(type, el) {
             document.querySelectorAll('.tabs .tab').forEach(t => t.classList.remove('active'));
             el.classList.add('active'); renderStoreProducts(type);
@@ -1414,7 +1513,8 @@ let uploadedProductImagesBase64 = [];
                 qty: parseInt(document.getElementById('p-qty').value, 10) || 0,
                 sizes: document.getElementById('p-sizes').value,
                 colors: document.getElementById('p-colors').value,
-                img: uploadedProductImgBase64
+                img: uploadedProductImgBase64,
+                images: uploadedProductImagesBase64,
             };
             const submitButton = document.querySelector('#add-product-form button[type="submit"]');
             if (submitButton) { submitButton.disabled = true; submitButton.textContent = 'جارٍ الحفظ...'; }
@@ -1424,6 +1524,7 @@ let uploadedProductImagesBase64 = [];
                 localStorage.setItem('bs_products', JSON.stringify(products));
                 document.getElementById('add-product-form').reset();
                 uploadedProductImgBase64 = "";
+                uploadedProductImagesBase64 = [];
                 closeModal('add-product-modal');
                 renderStoreProducts();
                 renderAdminProducts();
